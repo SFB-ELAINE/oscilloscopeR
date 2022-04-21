@@ -1,0 +1,14 @@
+Package: oscilliscopeR
+Type: Package
+Title: Import and work with data from oscilloscope
+Version: 0.1.0
+Author: c(person("Kai", "Budde", email = "kai.budde@uni-rostock.de",
+    role = c("aut", "cre"))
+Maintainer: Kai Budde <kai.budde@uni-rostock.de>
+Description: This package reads recorded data from measurements
+    of an oscilloscope (as yaml files) and plots them. 
+License: LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports: tidyverse, yaml, ggplot2, scattermore
+RoxygenNote: 7.1.2
