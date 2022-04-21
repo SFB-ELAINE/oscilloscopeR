@@ -17,6 +17,7 @@
 #' and max values to be shown on y axis)
 #' @param filter_stim_off A boolean (indicates whether measurements while
 #' stim==off are to be filtered)
+#' @param epsilon A number (min. distance for mean from 0 needed)
 #' @param plot_title A character (title of the plot)
 #' @return 0
 
@@ -29,11 +30,11 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
                           channel_stimulation_pulse = "CHAN2",
                           voltage_plot_bound = NULL,
                           filter_stim_off = TRUE,
+                          epsilon = 1,
                           plot_title = NULL) {
 
   # Some function parameters
   factor_for_min_max_scaling <- 1.1
-  epsilon <- 1
 
   # Check for input data
   if(is.null(input_data)){
@@ -172,10 +173,10 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
 
     plot_waveform <- ggplot2::ggplot(data = input_data_filtered,
                                      aes(x = time, y = U, color=Channel)) +
-      geom_path() +
+      geom_line() +
       geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray", size=1) +
       geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray", size=1) +
-      geom_hline(yintercept=mean_value, linetype="dashed", color = "darkgray", size=1) +
+      geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
       annotate("text", x=plot_annotation_x, y=(voltage_plot_bound-2), label=p2p_value) +
       coord_cartesian(ylim = c(-voltage_plot_bound, voltage_plot_bound)) +
       labs(title=paste(plot_title, input_data_filtered$date_time[1], sep=" "),
@@ -235,7 +236,7 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
     scattermore::geom_scattermore() +
     geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray") +
-    geom_hline(yintercept=mean_value, linetype="dashed", color = "darkgray", size=1) +
+    geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
     annotate("text", x=plot_annotation_x, y=(voltage_plot_bound-2), label=p2p_value) +
     coord_cartesian(ylim = c(-voltage_plot_bound, voltage_plot_bound)) +
     labs(title=paste(plot_title, sep=" "),

@@ -75,6 +75,11 @@ getWaveforms <- function(input_file = NULL, input_directory = NULL) {
     yaml_files <- input_file
   }
 
+  if(length(yaml_files) == 0){
+    print("No yaml files found.")
+    return(NULL)
+  }
+
   for(i in 1:length(yaml_files)){
     # Read data
     if(zip_container){
