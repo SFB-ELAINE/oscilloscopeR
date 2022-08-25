@@ -263,7 +263,7 @@ plotWaveforms <- function(input_data = NULL,
     annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-2), label=p2p_value) +
     coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
     labs(title=paste(plot_title, sep=" "),
-         x = "time/\U00B5s", y = "U/V") +
+         x = xaxis_lab, y = "U/V") +
     theme_bw() +
     theme(axis.text.x = element_text(angle=90, vjust = 0.5),
           plot.title = element_text(hjust = 0.5))
