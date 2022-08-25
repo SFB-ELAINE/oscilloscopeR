@@ -13,11 +13,11 @@
 #' the stimulation pulse)
 #' @param channel_function_generator A character (name of the channel with
 #' the function generator pulse (for GATE TTL))
-#' @param voltage_plot_bound A number (value of min (negativ of the value)
+#' @param voltage_limits_of_plot A number (value of min (negativ of the value)
 #' and max values to be shown on y axis)
 #' @param filter_stim_off A boolean (indicates whether measurements while
 #' stim==off are to be filtered)
-#' @param epsilon A number (min. distance for mean from 0 needed)
+#' @param epsilon_for_filtering A number (min. distance for mean from 0 needed for filtering out the signal generator)
 #' @param plot_title A character (title of the plot)
 #' @return 0
 
@@ -28,9 +28,9 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
                           show_time_in_us = FALSE,
                           channel_function_generator = "CHAN1",
                           channel_stimulation_pulse = "CHAN2",
-                          voltage_plot_bound = NULL,
+                          voltage_limits_of_plot = NULL,
                           filter_stim_off = TRUE,
-                          epsilon = 1,
+                          epsilon_for_filtering = 1,
                           plot_title = NULL) {
 
   # Some function parameters
@@ -56,6 +56,9 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
     plot_title <- ""
   }
 
+  # Get date of experiment
+  date_of_experiment <- unique(as.Date(input_data$date_time))[1]
+
   # Convert time to \mu s ##################################################
   if(show_time_in_us){
     # Time is given in s
@@ -66,8 +69,8 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
   global_max_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation_pulse], 0.99, na.rm = TRUE))
   global_min_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation_pulse], 0.01, na.rm = TRUE))
 
-  if(is.null(voltage_plot_bound)){
-    voltage_plot_bound <- factor_for_min_max_scaling *
+  if(is.null(voltage_limits_of_plot)){
+    voltage_limits_of_plot <- factor_for_min_max_scaling *
       max(abs(global_max_value), abs(global_min_value))
   }
 
@@ -79,7 +82,7 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
     dplyr::group_by(ID) %>%
     dplyr::summarise(mean = mean(U, na.rm=TRUE))
 
-  ID_with_frequency_signal <- df_dummy$ID[df_dummy$mean > epsilon & !is.na(df_dummy$mean)][1]
+  ID_with_frequency_signal <- df_dummy$ID[df_dummy$mean > epsilon_for_filtering & !is.na(df_dummy$mean)][1]
 
   filter_date <- unique(input_data$date_time[input_data$ID == ID_with_frequency_signal])[1]
   df_dummy <- input_data %>%
@@ -111,7 +114,7 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
     dplyr::group_by(ID) %>%
     dplyr::summarise(PeakToPeak=max(U)-min(U))
 
-  ID_without_stim <- df_dummy$ID[df_dummy$PeakToPeak < epsilon]
+  ID_without_stim <- df_dummy$ID[df_dummy$PeakToPeak < epsilon_for_filtering]
 
   if(filter_stim_off){
     input_data <- input_data %>%
@@ -177,8 +180,8 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
       geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray", size=1) +
       geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray", size=1) +
       geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
-      annotate("text", x=plot_annotation_x, y=(voltage_plot_bound-2), label=p2p_value) +
-      coord_cartesian(ylim = c(-voltage_plot_bound, voltage_plot_bound)) +
+      annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-2), label=p2p_value) +
+      coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
       labs(title=paste(plot_title, input_data_filtered$date_time[1], sep=" "),
            x = xaxis_lab, y = "U/V") +
       theme_bw() +
@@ -237,8 +240,8 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
     geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
-    annotate("text", x=plot_annotation_x, y=(voltage_plot_bound-2), label=p2p_value) +
-    coord_cartesian(ylim = c(-voltage_plot_bound, voltage_plot_bound)) +
+    annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-2), label=p2p_value) +
+    coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
     labs(title=paste(plot_title, sep=" "),
          x = "time/\U00B5s", y = "U/V") +
     theme_bw() +
@@ -246,7 +249,7 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
           plot.title = element_text(hjust = 0.5))
 
   # Save files
-  file_path <- file.path(output_dir, paste0("all_in_one_", plot_title, ".png"))
+  file_path <- file.path(output_dir, paste0(date_of_experiment, "_all_in_one_", plot_title, ".png"))
   ggsave(plot = plot_waveform, filename = file_path, device = "png", width = 19.2, height = 10.8,  units = "cm")
 
   return(invisible(NULL))

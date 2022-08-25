@@ -17,10 +17,12 @@ convertMeasurementListToTibble <- function(df_data_list){
   for(j in 1:length(df_data_list)){
     if(j == 1){
       df_data <- dplyr::as_tibble(df_data_list[[j]])
-      df_data$Channel <- gsub(pattern = "CHAN", replacement = "", x = names(df_data_list)[j])
+      # df_data$Channel <- gsub(pattern = "CHAN", replacement = "", x = names(df_data_list)[j])
+      df_data$Channel <- names(df_data_list)[j]
     }else{
       df_data_dummy <- dplyr::as_tibble(df_data_list[[j]])
-      df_data_dummy$Channel <- gsub(pattern = "CHAN", replacement = "", x = names(df_data_list)[j])
+      # df_data_dummy$Channel <- gsub(pattern = "CHAN", replacement = "", x = names(df_data_list)[j])
+      df_data_dummy$Channel <- names(df_data_list)[j]
 
       df_data <- dplyr::bind_rows(df_data, df_data_dummy)
     }

@@ -1,7 +1,7 @@
 Package: oscilliscopeR
 Type: Package
 Title: Import and work with data from oscilloscope
-Version: 0.1.1
+Version: 0.1.2
 Author: c(person("Kai", "Budde", email = "kai.budde@uni-rostock.de",
     role = c("aut", "cre"))
 Maintainer: Kai Budde <kai.budde@uni-rostock.de>
@@ -10,5 +10,5 @@ Description: This package reads recorded data from measurements
 License: LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports: tidyverse, yaml, ggplot2, scattermore
+Imports: tidyverse, yaml, scattermore
 RoxygenNote: 7.1.2
