@@ -15,6 +15,7 @@
 #' the function generator pulse (for GATE TTL))
 #' @param voltage_limits_of_plot A number (value of min (negativ of the value)
 #' and max values to be shown on y axis)
+#' @param plot_waveforms A character (shows if all, none, or one waveform shall be plotted)
 #' @param filter_stim_off A boolean (indicates whether measurements while
 #' stim==off are to be filtered)
 #' @param epsilon_for_filtering A number (min. distance for mean from 0 needed for filtering out the signal generator)
@@ -24,10 +25,12 @@
 # Created: 2022/04/21
 # Last changed: 2022/04/21
 
-plotWaveforms <- function(input_data = NULL, output_dir = NULL,
+plotWaveforms <- function(input_data = NULL,
+                          output_dir = NULL,
                           show_time_in_us = FALSE,
                           channel_function_generator = "CHAN1",
                           channel_stimulation_pulse = "CHAN2",
+                          plot_waveforms = "all",
                           voltage_limits_of_plot = NULL,
                           filter_stim_off = TRUE,
                           epsilon_for_filtering = 1,
@@ -127,77 +130,89 @@ plotWaveforms <- function(input_data = NULL, output_dir = NULL,
   }
 
   # Plot each waveform recording in a separate image #######################
-
-  for(i in unique(input_data$ID)){
-
-    input_data_filtered <- input_data %>%
-      dplyr::filter(ID == i)
-
-    # Get max and min (smoothed) of all stimulation pulses #################
-    lower_bound <- (max(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]) -
-                      mean(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]))/2
-    upper_bound <- (min(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]) -
-                      mean(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]))/2
-
-    max_value <- as.numeric(quantile(input_data_filtered$U[
-      input_data_filtered$Channel == channel_stimulation_pulse & input_data_filtered$U > lower_bound],
-      0.95, na.rm = TRUE))
-    min_value <- as.numeric(quantile(input_data_filtered$U[
-      input_data_filtered$Channel == channel_stimulation_pulse & input_data_filtered$U < upper_bound],
-      0.05, na.rm = TRUE))
-
-    p2p_value <- abs(max_value) + abs(min_value)
-    if(is.na(p2p_value)){
-      p2p_value <- 0
-    }
-    p2p_value <- format(round(p2p_value, digits = 2), nsmall = 2)
-    p2p_value <- paste("V_p2p=", p2p_value, "V", sep="")
-
-    # Calculate mean value of stimulation pulses ###########################
-
-    if(start_point_function_generator_pulse == end_point_function_generator_pulse){
-      df_dummy <- input_data_filtered %>%
-        dplyr::filter(Channel == channel_stimulation_pulse)
-
-      mean_value <- mean(df_dummy$U)
-    }else{
-      df_dummy <- input_data_filtered %>%
-        dplyr::filter(Channel == channel_stimulation_pulse) %>%
-        dplyr::filter(time >= start_point_function_generator_pulse &
-                        time < end_point_function_generator_pulse)
-
-      mean_value <- mean(df_dummy$U)
-    }
-
-
-    # Plot complete data from YAML file ####################################
-    plot_annotation_x <- 0.05*max(input_data_filtered$time)
-    xaxis_lab <- ifelse(test = show_time_in_us,yes = "time/\U00B5s", no = "time/s")
-
-    plot_waveform <- ggplot2::ggplot(data = input_data_filtered,
-                                     aes(x = time, y = U, color=Channel)) +
-      geom_line() +
-      geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray", size=1) +
-      geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray", size=1) +
-      geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
-      annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-2), label=p2p_value) +
-      coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
-      labs(title=paste(plot_title, input_data_filtered$date_time[1], sep=" "),
-           x = xaxis_lab, y = "U/V") +
-      theme_bw() +
-      theme(axis.text.x = element_text(angle=90, vjust = 0.5),
-            plot.title = element_text(hjust = 0.5))
-
-    # Date and time as writable string
-    date_time_measurement <- input_data_filtered$date_time[1]
-    date_time_measurement <- gsub(pattern = " ", replacement = "_", x = date_time_measurement)
-    date_time_measurement <- gsub(pattern = ":", replacement = "", x = date_time_measurement)
-
-    # Save files
-    file_path <- file.path(output_dir, paste0(date_time_measurement, ".png"))
-    ggsave(plot = plot_waveform, filename = file_path, device = "png", width = 19.2, height = 10.8,  units = "cm")
+  if(plot_waveforms == "all"){
+    waveforms <-  unique(input_data$ID)
+  }else if(plot_waveforms == "one"){
+    waveforms <-  unique(input_data$ID)[
+      floor(length(unique(input_data$ID))/2)]
+  }else{
+    waveforms <- NA
   }
-  rm(i)
+
+  if(!is.na(waveforms)){
+    for(i in waveforms){
+
+      input_data_filtered <- input_data %>%
+        dplyr::filter(ID == i)
+
+      # Get max and min (smoothed) of all stimulation pulses #################
+      lower_bound <- (max(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]) -
+                        mean(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]))/2
+      upper_bound <- (min(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]) -
+                        mean(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]))/2
+
+      max_value <- as.numeric(quantile(input_data_filtered$U[
+        input_data_filtered$Channel == channel_stimulation_pulse & input_data_filtered$U > lower_bound],
+        0.95, na.rm = TRUE))
+      min_value <- as.numeric(quantile(input_data_filtered$U[
+        input_data_filtered$Channel == channel_stimulation_pulse & input_data_filtered$U < upper_bound],
+        0.05, na.rm = TRUE))
+
+      p2p_value <- abs(max_value) + abs(min_value)
+      if(is.na(p2p_value)){
+        p2p_value <- 0
+      }
+      p2p_value <- format(round(p2p_value, digits = 2), nsmall = 2)
+      p2p_value <- paste("V_p2p=", p2p_value, "V", sep="")
+
+      # Calculate mean value of stimulation pulses ###########################
+
+      if(start_point_function_generator_pulse == end_point_function_generator_pulse){
+        df_dummy <- input_data_filtered %>%
+          dplyr::filter(Channel == channel_stimulation_pulse)
+
+        mean_value <- mean(df_dummy$U)
+      }else{
+        df_dummy <- input_data_filtered %>%
+          dplyr::filter(Channel == channel_stimulation_pulse) %>%
+          dplyr::filter(time >= start_point_function_generator_pulse &
+                          time < end_point_function_generator_pulse)
+
+        mean_value <- mean(df_dummy$U)
+      }
+
+
+      # Plot complete data from YAML file ####################################
+      plot_annotation_x <- 0.05*max(input_data_filtered$time)
+      xaxis_lab <- ifelse(test = show_time_in_us,yes = "time/\U00B5s", no = "time/s")
+
+      plot_waveform <- ggplot2::ggplot(data = input_data_filtered,
+                                       aes(x = time, y = U, color=Channel)) +
+        geom_line() +
+        geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray", size=1) +
+        geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray", size=1) +
+        geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
+        annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-2), label=p2p_value) +
+        coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
+        labs(title=paste(plot_title, input_data_filtered$date_time[1], sep=" "),
+             x = xaxis_lab, y = "U/V") +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle=90, vjust = 0.5),
+              plot.title = element_text(hjust = 0.5))
+
+      # Date and time as writable string
+      date_time_measurement <- input_data_filtered$date_time[1]
+      date_time_measurement <- gsub(pattern = " ", replacement = "_", x = date_time_measurement)
+      date_time_measurement <- gsub(pattern = ":", replacement = "", x = date_time_measurement)
+
+      # Save files
+      file_path <- file.path(output_dir, paste0(date_time_measurement, ".png"))
+      ggsave(plot = plot_waveform, filename = file_path, device = "png", width = 19.2, height = 10.8,  units = "cm")
+    }
+
+    rm(i)
+
+  }
 
   # Plot all waveforms in one image ########################################
 
