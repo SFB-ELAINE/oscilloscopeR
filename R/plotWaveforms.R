@@ -33,7 +33,7 @@ plotWaveforms <- function(input_data = NULL,
                           plot_waveforms = "all",
                           voltage_limits_of_plot = NULL,
                           filter_stim_off = TRUE,
-                          epsilon_for_filtering = 1,
+                          epsilon_for_filtering = 1.5,
                           plot_title = NULL) {
 
   # Some function parameters
@@ -83,18 +83,23 @@ plotWaveforms <- function(input_data = NULL,
   df_dummy <- input_data %>%
     dplyr::filter(Channel == channel_function_generator) %>%
     dplyr::group_by(ID) %>%
-    dplyr::summarise(mean = mean(U, na.rm=TRUE))
+    # dplyr::summarise(mean = mean(U, na.rm=TRUE))
+    dplyr::summarise(p2p = max(U, na.rm=TRUE)-min(U, na.rm=TRUE))
 
-  ID_with_frequency_signal <- df_dummy$ID[df_dummy$mean > epsilon_for_filtering & !is.na(df_dummy$mean)][1]
+  ID_with_frequency_signal <- df_dummy$ID[df_dummy$p2p > epsilon_for_filtering & !is.na(df_dummy$p2p)][1]
 
   filter_date <- unique(input_data$date_time[input_data$ID == ID_with_frequency_signal])[1]
   df_dummy <- input_data %>%
     dplyr::filter(Channel == channel_function_generator,
                   date_time == filter_date)
 
-  rising_edges <- which(df_dummy$U < mean(df_dummy$U))[
-    (which(df_dummy$U < mean(df_dummy$U)) + 1) %in%
-      which(df_dummy$U > mean(df_dummy$U))]
+  # rising_edges <- which(df_dummy$U < mean(df_dummy$U))[
+  #   (which(df_dummy$U < mean(df_dummy$U)) + 1) %in%
+  #     which(df_dummy$U > mean(df_dummy$U))]
+
+  rising_edges <- which(df_dummy$U < max(df_dummy$U, na.rm = TRUE)/2)[
+    ( which(df_dummy$U < max(df_dummy$U, na.rm = TRUE)/2) + 1 ) %in%
+      which(df_dummy$U > max(df_dummy$U, na.rm = TRUE)/2) ]
 
   start_point_function_generator_pulse <- df_dummy$time[rising_edges[1]]
   end_point_function_generator_pulse <- df_dummy$time[rising_edges[length(rising_edges)]]
