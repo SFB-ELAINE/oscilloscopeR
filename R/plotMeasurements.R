@@ -15,7 +15,7 @@
 #' @return 0
 
 # Created: 2022/04/20
-# Last changed: 2022/08/25
+# Last changed: 2023/02/21
 
 plotMeasurements <- function(input_data = NULL, output_dir = NULL,
                              vavg_min = NULL, vavg_max = NULL,
@@ -43,10 +43,16 @@ plotMeasurements <- function(input_data = NULL, output_dir = NULL,
   # Set plot title
   if(is.null(plot_title)){
     plot_title <- ""
+
+    # Get date of experiment
+    date_of_experiment <- unique(as.Date(input_data$date_time))[1]
+
+    name_for_saving <- date_of_experiment
+  }else{
+    name_for_saving <- gsub(pattern = " ", replacement = "_", x = plot_title)
   }
 
-  # Get date of experiment
-  date_of_experiment <- unique(as.Date(input_data$date_time))[1]
+
 
   # Determine Vavg minimum and maximum if not given
   if(is.null(vavg_min)){
@@ -137,7 +143,7 @@ plotMeasurements <- function(input_data = NULL, output_dir = NULL,
   # }
 
   # Save files
-  file_path <- file.path(output_dir, paste0(date_of_experiment, "_vavg_measurement.png"))
+  file_path <- file.path(output_dir, paste0(name_for_saving, "_vavg_measurement.png"))
   ggsave(plot = plot_vavg, filename = file_path, device = "png", width = 19.2, height = 10.8,  units = "cm")
 
   # Find VPP #################################################################
@@ -158,7 +164,7 @@ plotMeasurements <- function(input_data = NULL, output_dir = NULL,
   #     scale_x_datetime(date_breaks = timedate_breaks)
   # }
 
-  file_path <- file.path(output_dir, paste0(date_of_experiment, "_vp2p_measurement.png"))
+  file_path <- file.path(output_dir, paste0(name_for_saving, "_vp2p_measurement.png"))
   ggsave(plot = plot_vpp, filename = file_path, device = "png", width = 19.2, height = 10.8,  units = "cm")
 
   return(invisible(NULL))
