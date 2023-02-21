@@ -150,8 +150,8 @@ plotWaveforms <- function(input_data = NULL,
   if(plot_waveforms == "all"){
     waveforms <-  unique(input_data$ID)
   }else if(plot_waveforms == "one"){
-    waveforms <-  unique(input_data$ID)[
-      floor(length(unique(input_data$ID))/2)]
+    which_wave <- max(floor(length(unique(input_data$ID))/2), 1)
+    waveforms <-  unique(input_data$ID)[which_wave]
   }else{
     waveforms <- NA
   }
