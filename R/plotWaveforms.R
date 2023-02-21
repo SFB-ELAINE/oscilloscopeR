@@ -57,10 +57,22 @@ plotWaveforms <- function(input_data = NULL,
   # Set plot title
   if(is.null(plot_title)){
     plot_title <- ""
+    plot_title_without_date <- ""
+
+    # Get date of experiment
+    date_of_experiment <- unique(as.Date(input_data$date_time))[1]
+
+    name_for_saving <- date_of_experiment
+    name_for_saving_without_date <- ""
+
+  }else{
+    name_for_saving <- gsub(pattern = " ", replacement = "_", x = plot_title)
+
+    plot_title_without_date <- substr(x = plot_title, start = 12, stop = nchar(plot_title))
+    name_for_saving_without_date <- gsub(pattern = " ", replacement = "_", x = plot_title_without_date)
   }
 
-  # Get date of experiment
-  date_of_experiment <- unique(as.Date(input_data$date_time))[1]
+
 
   # Convert time to \mu s ##################################################
   if(show_time_in_us){
@@ -158,10 +170,10 @@ plotWaveforms <- function(input_data = NULL,
 
       max_value <- as.numeric(quantile(input_data_filtered$U[
         input_data_filtered$Channel == channel_stimulation_pulse & input_data_filtered$U > lower_bound],
-        0.95, na.rm = TRUE))
+        0.99, na.rm = TRUE))
       min_value <- as.numeric(quantile(input_data_filtered$U[
         input_data_filtered$Channel == channel_stimulation_pulse & input_data_filtered$U < upper_bound],
-        0.05, na.rm = TRUE))
+        0.01, na.rm = TRUE))
 
       p2p_value <- abs(max_value) + abs(min_value)
       if(is.na(p2p_value)){
@@ -199,7 +211,7 @@ plotWaveforms <- function(input_data = NULL,
         geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
         annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-2), label=p2p_value) +
         coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
-        labs(title=paste(plot_title, input_data_filtered$date_time[1], sep=" "),
+        labs(title=paste(plot_title_without_date, input_data_filtered$date_time[1], sep=" "),
              x = xaxis_lab, y = "U/V") +
         theme_bw() +
         theme(axis.text.x = element_text(angle=90, vjust = 0.5),
@@ -211,7 +223,7 @@ plotWaveforms <- function(input_data = NULL,
       date_time_measurement <- gsub(pattern = ":", replacement = "", x = date_time_measurement)
 
       # Save files
-      file_path <- file.path(output_dir, paste0(date_time_measurement, ".png"))
+      file_path <- file.path(output_dir, paste0(date_time_measurement, "_", name_for_saving_without_date, ".png"))
       ggsave(plot = plot_waveform, filename = file_path, device = "png", width = 19.2, height = 10.8,  units = "cm")
     }
 
@@ -229,10 +241,10 @@ plotWaveforms <- function(input_data = NULL,
 
   max_value <- as.numeric(quantile(input_data$U[
     input_data$Channel == channel_stimulation_pulse & input_data$U > lower_bound],
-    0.95, na.rm = TRUE))
+    0.99, na.rm = TRUE))
   min_value <- as.numeric(quantile(input_data$U[
     input_data$Channel == channel_stimulation_pulse & input_data$U < upper_bound],
-    0.05, na.rm = TRUE))
+    0.01, na.rm = TRUE))
 
   p2p_value <- abs(max_value) + abs(min_value)
 
@@ -243,12 +255,23 @@ plotWaveforms <- function(input_data = NULL,
   p2p_value <- paste("V_p2p=", p2p_value, "V", sep="")
 
   # Calculate mean
-  df_dummy <- input_data %>%
-    dplyr::filter(Channel == channel_stimulation_pulse) %>%
-    dplyr::filter(time >= start_point_function_generator_pulse &
-                    time < end_point_function_generator_pulse)
+  if(start_point_function_generator_pulse == end_point_function_generator_pulse){
+    df_dummy <- input_data %>%
+      dplyr::filter(Channel == channel_stimulation_pulse)
 
-  mean_value <- mean(df_dummy$U)
+    mean_value <- mean(df_dummy$U)
+  }else{
+    df_dummy <- input_data %>%
+      dplyr::filter(Channel == channel_stimulation_pulse) %>%
+      dplyr::filter(time >= start_point_function_generator_pulse &
+                      time < end_point_function_generator_pulse)
+
+    mean_value <- mean(df_dummy$U)
+  }
+
+
+
+
 
   # Plot complete data from YAML file ####################################
   plot_annotation_x <- 0.05*max(input_data$time)
@@ -269,7 +292,7 @@ plotWaveforms <- function(input_data = NULL,
           plot.title = element_text(hjust = 0.5))
 
   # Save files
-  file_path <- file.path(output_dir, paste0(date_of_experiment, "_all_in_one_", plot_title, ".png"))
+  file_path <- file.path(output_dir, paste0(name_for_saving, "_all_in_one.png"))
   ggsave(plot = plot_waveform, filename = file_path, device = "png", width = 19.2, height = 10.8,  units = "cm")
 
   return(invisible(NULL))
