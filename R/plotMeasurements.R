@@ -17,9 +17,12 @@
 # Created: 2022/04/20
 # Last changed: 2023/02/21
 
-plotMeasurements <- function(input_data = NULL, output_dir = NULL,
-                             vavg_min = NULL, vavg_max = NULL,
-                             vpp_min = NULL, vpp_max = NULL,
+plotMeasurements <- function(input_data = NULL,
+                             output_dir = NULL,
+                             vavg_min = NULL,
+                             vavg_max = NULL,
+                             vpp_min = NULL,
+                             vpp_max = NULL,
                              plot_title = NULL) {
 
   # Some function parameters
@@ -56,18 +59,26 @@ plotMeasurements <- function(input_data = NULL, output_dir = NULL,
 
   # Determine Vavg minimum and maximum if not given
   if(is.null(vavg_min)){
-    vavg_min <- as.numeric(quantile(df_data$VAVG, 0.01, na.rm = TRUE))*factor_for_min_max_scaling
+    vavg_min <- round(
+      as.numeric(quantile(df_data$VAVG, 0.01, na.rm = TRUE)) *
+        factor_for_min_max_scaling, digits = 0)
   }
   if(is.null(vavg_max)){
-    vavg_max <- as.numeric(quantile(df_data$VAVG, 0.99, na.rm = TRUE))*factor_for_min_max_scaling
+    vavg_max <- round(
+      as.numeric(quantile(df_data$VAVG, 0.99, na.rm = TRUE)) *
+        factor_for_min_max_scaling, digits = 0)
   }
 
   # Determine Vpp minimum and maximum if not given
   if(is.null(vpp_min)){
-    vpp_min <- as.numeric(quantile(df_data$VPP, 0.01, na.rm = TRUE))*factor_for_min_max_scaling
+    vpp_min <- round(
+      as.numeric(quantile(df_data$VPP, 0.01, na.rm = TRUE)) *
+        factor_for_min_max_scaling, digits = 0)
   }
   if(is.null(vpp_max)){
-    vpp_max <- as.numeric(quantile(df_data$VPP, 0.99, na.rm = TRUE))*factor_for_min_max_scaling
+    vpp_max <- round(
+      as.numeric(quantile(df_data$VPP, 0.99, na.rm = TRUE)) *
+        factor_for_min_max_scaling, digits = 0)
   }
 
   # # Set time breaks

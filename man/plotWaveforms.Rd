@@ -11,8 +11,10 @@ plotWaveforms(
   show_time_in_us = FALSE,
   channel_function_generator = "CHAN1",
   channel_stimulation_pulse = "CHAN2",
-  voltage_plot_bound = NULL,
+  plot_waveforms = "all",
+  voltage_limits_of_plot = NULL,
   filter_stim_off = TRUE,
+  epsilon_for_filtering = 1.5,
   plot_title = NULL
 )
 }
@@ -30,11 +32,15 @@ the function generator pulse (for GATE TTL))}
 \item{channel_stimulation_pulse}{A character (name of the channel with
 the stimulation pulse)}
 
-\item{voltage_plot_bound}{A number (value of min (negativ of the value)
+\item{plot_waveforms}{A character (shows if all, none, or one waveform shall be plotted)}
+
+\item{voltage_limits_of_plot}{A number (value of min (negativ of the value)
 and max values to be shown on y axis)}
 
 \item{filter_stim_off}{A boolean (indicates whether measurements while
 stim==off are to be filtered)}
+
+\item{epsilon_for_filtering}{A number (min. distance for mean from 0 needed for filtering out the signal generator)}
 
 \item{plot_title}{A character (title of the plot)}
 }
