@@ -298,26 +298,25 @@ plotWaveforms <- function(input_data = NULL,
   input_data$time_of_experiment_in_minutes <- as.double(difftime(
     input_data$date_time, start_time, units = "mins"))
 
-
   plot_waveform <- ggplot2::ggplot(data = input_data) +
     scattermore::geom_scattermore(aes(x = time, y = U, color=time_of_experiment_in_minutes),
                                   data = . %>% filter(Channel == channel_stimulation_pulse),
                                   alpha = 1, pointsize = 0.6)+
     scale_color_viridis_c(name = "Time of\nexperiment\nin min.", direction = -1, limits = c(0, 120), option = "C") +
-    geom_line(aes(x = time, y = U, linetype = Channel), color = "#619CFF",
+    geom_line(aes(x = time, y = U, linetype = "channel_function_generator"), color = "#00BFC4",
               data = . %>% filter(Channel == channel_function_generator) %>% group_by(time) %>% mutate(U=mean(U)),
-              linewidth=1.2) +
-    geom_line(aes(x = time, y = U, linetype = Channel), color = "#F8766D",
+              linewidth=0.6) +
+    geom_line(aes(x = time, y = U, linetype = "channel_stimulation_pulse"), color = "#F8766D",
               data = . %>% filter(Channel == channel_stimulation_pulse) %>% group_by(time) %>% mutate(U=mean(U)),
-              linewidth=1.2) +
-    scale_linetype_discrete(name = "Channel", labels = c("FunGen", "mean(ES)")) +
-    guides(linetype = guide_legend(override.aes = list(color=c("#619CFF", "#F8766D")), order = 1 )) +
+              linewidth=0.6) +
+    scale_linetype_manual(name = "Channel", values=c("channel_function_generator" = "solid", "channel_stimulation_pulse" = "dashed"), labels = c("FunGen", "ES (mean)")) +
+    guides(linetype = guide_legend(override.aes = list(color=c("#00BFC4", "#F8766D"), linetype=c(1,2)), order = 1 )) +
     geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
     annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value) +
-    annotate("text", x=plot_annotation_x_minmax, y=(max_value-1), label=max_value_text) +
-    annotate("text", x=plot_annotation_x_minmax, y=(min_value+1), label=min_value_text) +
+    annotate("text", x=plot_annotation_x_minmax, y=(max_value+1), label=max_value_text) +
+    annotate("text", x=plot_annotation_x_minmax, y=(min_value-1), label=min_value_text) +
     annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text)  +
     coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
     labs(title=plot_title,
