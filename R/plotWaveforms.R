@@ -23,7 +23,7 @@
 #' @return 0
 
 # Created: 2022/04/21
-# Last changed: 2023/02/21
+# Last changed: 2023/08/01
 
 plotWaveforms <- function(input_data = NULL,
                           output_dir = NULL,
@@ -57,7 +57,7 @@ plotWaveforms <- function(input_data = NULL,
   # Set plot title
   if(is.null(plot_title)){
     plot_title <- ""
-    plot_title_without_date <- ""
+    # plot_title_without_date <- ""
 
     # Get date of experiment
     date_of_experiment <- unique(as.Date(input_data$date_time))[1]
@@ -156,7 +156,7 @@ plotWaveforms <- function(input_data = NULL,
     waveforms <- NA
   }
 
-  if(!is.na(waveforms)){
+  if(length(waveforms) > 1 || !is.na(waveforms)){
     for(i in waveforms){
 
       input_data_filtered <- input_data %>%
@@ -179,8 +179,11 @@ plotWaveforms <- function(input_data = NULL,
       if(is.na(p2p_value)){
         p2p_value <- 0
       }
-      p2p_value <- format(round(p2p_value, digits = 2), nsmall = 2)
+      p2p_value <- format(round(p2p_value, digits = 1), nsmall = 1)
       p2p_value <- paste("V_p2p=", p2p_value, "V", sep="")
+
+      max_value_text <- paste("V_max=", format(round(max_value, digits = 1), nsmall = 1), "V", sep="")
+      min_value_text <- paste("V_min=", format(round(min_value, digits = 1), nsmall = 1), "V", sep="")
 
       # Calculate mean value of stimulation pulses ###########################
 
@@ -198,9 +201,12 @@ plotWaveforms <- function(input_data = NULL,
         mean_value <- mean(df_dummy$U)
       }
 
+      mean_value_value_text <- paste("V_mean=", format(round(mean_value, digits = 1), nsmall = 1), "V", sep="")
+
 
       # Plot complete data from YAML file ####################################
-      plot_annotation_x <- 0.05*max(input_data_filtered$time)
+      plot_annotation_x <- 0.5*max(input_data_filtered$time)
+      plot_annotation_x_minmax <- 0.1*max(input_data_filtered$time)
       xaxis_lab <- ifelse(test = show_time_in_us,yes = "time/\U00B5s", no = "time/s")
 
       plot_waveform <- ggplot2::ggplot(data = input_data_filtered,
@@ -209,9 +215,14 @@ plotWaveforms <- function(input_data = NULL,
         geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray", size=1) +
         geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray", size=1) +
         geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
-        annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-2), label=p2p_value) +
+        annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value) +
+        annotate("text", x=plot_annotation_x_minmax, y=(max_value-1), label=max_value_text) +
+        annotate("text", x=plot_annotation_x_minmax, y=(min_value+1), label=min_value_text) +
+        annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text) +
         coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
-        labs(title=paste(plot_title_without_date, input_data_filtered$date_time[1], sep=" "),
+        # labs(title=paste(plot_title_without_date, input_data_filtered$date_time[1], sep=" "),
+        #      x = xaxis_lab, y = "U/V") +
+        labs(title=paste(plot_title, format(as.POSIXct(input_data_filtered$date_time[1]), format = "%H:%M:%S"), sep=" "),
              x = xaxis_lab, y = "U/V") +
         theme_bw() +
         theme(axis.text.x = element_text(angle=90, vjust = 0.5),
@@ -251,8 +262,12 @@ plotWaveforms <- function(input_data = NULL,
   if(is.na(p2p_value)){
     p2p_value <- 0
   }
-  p2p_value <- format(round(p2p_value, digits = 2), nsmall = 2)
+  p2p_value <- format(round(p2p_value, digits = 1), nsmall = 1)
   p2p_value <- paste("V_p2p=", p2p_value, "V", sep="")
+
+  max_value_text <- paste("V_max=", format(round(max_value, digits = 1), nsmall = 1), "V", sep="")
+  min_value_text <- paste("V_min=", format(round(min_value, digits = 1), nsmall = 1), "V", sep="")
+
 
   # Calculate mean
   if(start_point_function_generator_pulse == end_point_function_generator_pulse){
@@ -269,12 +284,14 @@ plotWaveforms <- function(input_data = NULL,
     mean_value <- mean(df_dummy$U)
   }
 
+  mean_value_value_text <- paste("V_mean=", format(round(mean_value, digits = 1), nsmall = 1), "V", sep="")
 
 
 
 
-  # Plot complete data from YAML file ####################################
-  plot_annotation_x <- 0.05*max(input_data$time)
+  # Plot complete data from YAML file ######################################
+  plot_annotation_x <- 0.5*max(input_data$time)
+  plot_annotation_x_minmax <- 0.1*max(input_data$time)
 
   plot_waveform <- ggplot2::ggplot(data = input_data,
                                    aes(x = time, y = U, color=Channel)) +
@@ -283,9 +300,12 @@ plotWaveforms <- function(input_data = NULL,
     geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
-    annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-2), label=p2p_value) +
+    annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value) +
+    annotate("text", x=plot_annotation_x_minmax, y=(max_value-1), label=max_value_text) +
+    annotate("text", x=plot_annotation_x_minmax, y=(min_value+1), label=min_value_text) +
+    annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text) +
     coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
-    labs(title=paste(plot_title, sep=" "),
+    labs(title=plot_title,
          x = xaxis_lab, y = "U/V") +
     theme_bw() +
     theme(axis.text.x = element_text(angle=90, vjust = 0.5),

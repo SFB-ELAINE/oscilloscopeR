@@ -11,4 +11,4 @@ License: LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports: tidyverse, yaml, scattermore
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3

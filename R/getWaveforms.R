@@ -80,6 +80,8 @@ getWaveforms <- function(input_file = NULL, input_directory = NULL) {
     return(NULL)
   }
 
+  first_non_zero_data <- FALSE
+
   for(i in 1:length(yaml_files)){
     # Read data
     if(zip_container){
@@ -90,20 +92,29 @@ getWaveforms <- function(input_file = NULL, input_directory = NULL) {
       df_data_list <- yaml::read_yaml(file = file.path(input_directory, yaml_files[i]))
     }
 
-    # Convert list to tibble
-    df_data_dummy <- dplyr::as_tibble(df_data_list)
+    if(length(df_data_list[[1]]) > 0){
 
-    # Get date and time of measurement
-    df_data_dummy$date_time <- gsub(pattern = "-wave\\.yml",
-                                    replacement = "",
-                                    x = basename(yaml_files[i]))
+      # Convert list to tibble
+      df_data_dummy <- dplyr::as_tibble(df_data_list)
 
-    df_data_dummy$ID <- i
+      # Get date and time of measurement
+      df_data_dummy$date_time <- gsub(pattern = "-wave\\.yml",
+                                      replacement = "",
+                                      x = basename(yaml_files[i]))
 
-    if(i == 1){
-      df_data <- df_data_dummy
+      df_data_dummy$ID <- i
+
+      if(i == 1 || first_non_zero_data){
+        df_data <- df_data_dummy
+        first_non_zero_data <- FALSE
+      }else{
+        df_data <- dplyr::bind_rows(df_data, df_data_dummy)
+      }
+
     }else{
-      df_data <- dplyr::bind_rows(df_data, df_data_dummy)
+      if(i == 1){
+        first_non_zero_data <- TRUE
+      }
     }
 
   }
