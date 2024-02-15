@@ -1,7 +1,7 @@
 # Testscript for using the R package oscilloscopeR for development  ++++++++++++++
-# Author: Kai Budde
+# Author: Kai Budde-Sagert
 # Created: 2022/04/19
-# Last changed: 2023/08/01
+# Last changed: 2024/02/14
 
 # Delete everything in the environment
 rm(list = ls())
@@ -20,7 +20,7 @@ if(!any(grepl(pattern = "groundhog", x = installed.packages(), ignore.case = TRU
 # Load packages
 # Load packages
 library(groundhog)
-pkgs <- c("tidyverse", "yaml", "scattermore", "devtools")
+pkgs <- c("tidyverse", "yaml", "scattermore", "devtools", "lubridate")
 groundhog.library(pkgs, groundhog.day)
 
 # Package development ######################################################
@@ -38,7 +38,7 @@ devtools::load_all()
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # ZIP File (containing yaml files)
 input_zip_file <- file.path("inst", "testdata","recorded_stimulation.zip")
-
+input_zip_file <- file.path("inst", "testdata","S16_20230323_ShortStimCellBio_MediumMediated.zip")
 # # YAML File
 # # input_file <- "C:/Users/Kai/Documents/git/gitHub/OscilloscopeRecordings/data/IonOptixMeasurements/1_GateOut/20211203-110117-measurement.yml"
 # # input_file <- "C:/Users/Kai/Documents/git/gitHub/OscilloscopeRecordings/data/IonOptixMeasurements/1_GateOut/20211203-110117-wave.yml"
@@ -63,7 +63,7 @@ df_data <- getWaveforms(input_file = input_zip_file)
 
 # Plot wave form data
 plotWaveforms(input_data = df_data,
-              plot_waveforms = "one")
+              plot_waveforms = "all")
 
 
 

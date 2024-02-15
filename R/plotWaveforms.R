@@ -3,7 +3,7 @@
 #' @details This functions takes recorded oscilloscope data (waveforms)
 #' (obtained through getWaveforms.R) and plots it
 #' @aliases plotwaveforms
-#' @author Kai Budde
+#' @author Kai Budde-Sagert
 #' @export plotWaveforms
 #' @param input_data A tibble (measurement data)
 #' @param output_dir A character (path to output directory)
@@ -13,13 +13,22 @@
 #' the stimulation pulse)
 #' @param channel_function_generator A character (name of the channel with
 #' the function generator pulse (for GATE TTL))
+#' @param channel_resistor A character (name of the channel that recorded the
+#' voltage drop across a shunt resistor)
 #' @param voltage_limits_of_plot A number (value of min (negativ of the value)
 #' and max values to be shown on y axis)
 #' @param plot_waveforms A character (shows if all, none, or one waveform shall be plotted)
-#' @param filter_stim_off A boolean (indicates whether measurements while
+#' @param filter_stim_off A Boolean (indicates whether measurements while
 #' stim==off are to be filtered)
+#' @param shunt_resistance A number (Resistance in ohm)
+#' @param plot_current_calculation A Boolean (plot min and max of measurements
+#' using the ohmic resistance of the shunt resistor)
+#' @param y_position_current_text A number (y position for displaying current
+#' measurement text).
 #' @param epsilon_for_filtering A number (min. distance for mean from 0 needed for filtering out the signal generator)
 #' @param plot_title A character (title of the plot)
+#' @param print_width A number (width in cm of the saved plot)
+#' @param print_height A number (height in cm of the saved plot)
 #' @return 0
 
 # Created: 2022/04/21
@@ -30,11 +39,17 @@ plotWaveforms <- function(input_data = NULL,
                           show_time_in_us = FALSE,
                           channel_function_generator = "CHAN1",
                           channel_stimulation_pulse = "CHAN2",
+                          channel_resistor = NA,
                           plot_waveforms = "all",
                           voltage_limits_of_plot = NULL,
                           filter_stim_off = TRUE,
+                          shunt_resistance = NA,
+                          plot_current_calculation = FALSE,
+                          y_position_current_text = NA,
                           epsilon_for_filtering = 1.5,
-                          plot_title = NULL) {
+                          plot_title = NULL,
+                          print_width = 19.2,
+                          print_height = 10.8) {
 
   # Some function parameters
   factor_for_min_max_scaling <- 1.1
@@ -185,6 +200,32 @@ plotWaveforms <- function(input_data = NULL,
       max_value_text <- paste("V_max=", format(round(max_value, digits = 1), nsmall = 1), "V", sep="")
       min_value_text <- paste("V_min=", format(round(min_value, digits = 1), nsmall = 1), "V", sep="")
 
+      # Get max and min (smoothed) of resistor voltages ####################
+      if(!is.na(channel_resistor) && !is.na(shunt_resistance)){
+        lower_bound <- (max(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]) -
+                          mean(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]))/2
+        upper_bound <- (min(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]) -
+                          mean(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]))/2
+
+        max_value_resistor <- as.numeric(quantile(input_data_filtered$U[
+          input_data_filtered$Channel == channel_resistor & input_data_filtered$U > lower_bound],
+          0.99, na.rm = TRUE))
+        min_value_resistor <- as.numeric(quantile(input_data_filtered$U[
+          input_data_filtered$Channel == channel_resistor & input_data_filtered$U < upper_bound],
+          0.01, na.rm = TRUE))
+
+        p2p_value_resistor <- abs(max_value_resistor) + abs(min_value_resistor)
+        if(is.na(p2p_value_resistor)){
+          p2p_value_resistor <- 0
+        }
+        p2p_value_resistor <- format(round(p2p_value_resistor, digits = 1), nsmall = 1)
+        p2p_value_resistor <- paste("V_p2p=", p2p_value_resistor, "V", sep="")
+
+        max_resistor_value_text <- paste("I(+)=", format(round(max_value_resistor / shunt_resistance * 1000), nsmall = 1), "mA", sep="")
+        min_resistor_value_text <- paste("I(-)=", format(round(abs(min_value_resistor) / shunt_resistance * 1000, digits = 1), nsmall = 1), "mA", sep="")
+      }
+
+
       # Calculate mean value of stimulation pulses ###########################
 
       if(start_point_function_generator_pulse == end_point_function_generator_pulse){
@@ -215,10 +256,10 @@ plotWaveforms <- function(input_data = NULL,
         geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray", size=1) +
         geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray", size=1) +
         geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
-        annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value) +
-        annotate("text", x=plot_annotation_x_minmax, y=(max_value-1), label=max_value_text) +
-        annotate("text", x=plot_annotation_x_minmax, y=(min_value+1), label=min_value_text) +
-        annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text) +
+        annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value, color = "darkgray") +
+        annotate("text", x=plot_annotation_x_minmax, y=(max_value-1), label=max_value_text, color = "darkgray") +
+        annotate("text", x=plot_annotation_x_minmax, y=(min_value+1), label=min_value_text, color = "darkgray") +
+        annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text, color = "darkgray") +
         coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
         # labs(title=paste(plot_title_without_date, input_data_filtered$date_time[1], sep=" "),
         #      x = xaxis_lab, y = "U/V") +
@@ -228,6 +269,20 @@ plotWaveforms <- function(input_data = NULL,
         theme(axis.text.x = element_text(angle=90, vjust = 0.5),
               plot.title = element_text(hjust = 0.5))
 
+      if(plot_current_calculation){
+        plot_annotation_resistor_x <- 0.9*max(input_data_filtered$time)
+
+        if(is.na(y_position_current_text)){
+          y_position_current_text <- 1.1*max_value_resistor
+        }
+
+        plot_waveform <- plot_waveform +
+          geom_hline(yintercept=max_value_resistor, linetype="dotted", color = "darkgoldenrod", size=1) +
+          geom_hline(yintercept=min_value_resistor, linetype="dotted", color = "darkgoldenrod", size=1) +
+          annotate("text", x=plot_annotation_resistor_x, y=y_position_current_text, label=max_resistor_value_text, color = "darkgoldenrod") +
+          annotate("text", x=plot_annotation_resistor_x, y=-y_position_current_text, label=min_resistor_value_text, color = "darkgoldenrod")
+      }
+
       # Date and time as writable string
       date_time_measurement <- input_data_filtered$date_time[1]
       date_time_measurement <- gsub(pattern = " ", replacement = "_", x = date_time_measurement)
@@ -235,7 +290,7 @@ plotWaveforms <- function(input_data = NULL,
 
       # Save files
       file_path <- file.path(output_dir, paste0(date_time_measurement, "_", name_for_saving_without_date, ".png"))
-      ggsave(plot = plot_waveform, filename = file_path, device = "png", width = 19.2, height = 10.8,  units = "cm")
+      ggsave(plot = plot_waveform, filename = file_path, device = "png", width = print_width, height = print_height,  units = "cm")
     }
 
     rm(i)
@@ -314,10 +369,10 @@ plotWaveforms <- function(input_data = NULL,
     geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
-    annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value) +
-    annotate("text", x=plot_annotation_x_minmax, y=(max_value+1), label=max_value_text) +
-    annotate("text", x=plot_annotation_x_minmax, y=(min_value-1), label=min_value_text) +
-    annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text)  +
+    annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value, color = "darkgray") +
+    annotate("text", x=plot_annotation_x_minmax, y=(max_value+1), label=max_value_text, color = "darkgray") +
+    annotate("text", x=plot_annotation_x_minmax, y=(min_value-1), label=min_value_text, color = "darkgray") +
+    annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text, color = "darkgray")  +
     coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
     labs(title=plot_title,
          x = xaxis_lab, y = "U/V") +
@@ -327,7 +382,7 @@ plotWaveforms <- function(input_data = NULL,
 
   # Save files
   file_path <- file.path(output_dir, paste0(name_for_saving, "_all_in_one.png"))
-  ggsave(plot = plot_waveform, filename = file_path, device = "png", width = 19.2, height = 10.8,  units = "cm")
+  ggsave(plot = plot_waveform, filename = file_path, device = "png", width = print_width, height = print_height,  units = "cm")
 
   return(invisible(NULL))
 }

@@ -3,7 +3,7 @@
 #' @details This function takes a list with oscilloscope readings saved
 #' as yaml and coverts it to a tibble
 #' @aliases convertmeasurementlisttotibble
-#' @author Kai Budde
+#' @author Kai Budde-Sagert
 #' @export convertMeasurementListToTibble
 #' @param df_data_list A list (list of data)
 #' @param variabel_name A character ()

@@ -3,7 +3,7 @@
 #' @details This functions takes recorded oscilloscope data (Vavg and Vpp)
 #' (obtained through getMeasurements.R) and plots it
 #' @aliases plotmeasurements
-#' @author Kai Budde
+#' @author Kai Budde-Sagert
 #' @export plotMeasurements
 #' @param input_data A tibble (measurement data)
 #' @param output_dir A character (path to output directory)

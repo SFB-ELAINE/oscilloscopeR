@@ -3,7 +3,7 @@
 #' @details This function reads yaml files (from a directory) or a zip file
 #' and imports the data into a tibble
 #' @aliases getmeasurements
-#' @author Kai Budde
+#' @author Kai Budde-Sagert
 #' @export getMeasurements
 #' @param input_file A character (path to yaml file to be converted)
 #' @param input_directory A character (path to directory with yaml files)

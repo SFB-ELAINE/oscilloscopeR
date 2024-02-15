@@ -3,7 +3,7 @@
 #' @details This function reads yaml files (from a directory) or a zip file
 #' and imports the waveform data into a tibble
 #' @aliases getwaveforms
-#' @author Kai Budde
+#' @author Kai Budde-Sagert
 #' @export getWaveforms
 #' @param input_file A character (path to yaml file to be converted)
 #' @param input_directory A character (path to directory with yaml files)
