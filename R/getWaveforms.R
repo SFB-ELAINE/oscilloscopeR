@@ -7,12 +7,16 @@
 #' @export getWaveforms
 #' @param input_file A character (path to yaml file to be converted)
 #' @param input_directory A character (path to directory with yaml files)
+#' @param reduce_resolution_of_input_data A Boolean (showing if fewer point
+#' are to be imported)
 #' @return A tibble with the data
 
 # Created: 2022/04/21
-# Last changed: 2022/04/21
+# Last changed: 2024/04/17
 
-getWaveforms <- function(input_file = NULL, input_directory = NULL) {
+getWaveforms <- function(input_file = NULL,
+                         input_directory = NULL,
+                         reduce_resolution_of_input_data = TRUE) {
 
   # Check for null input
   if(is.null(input_file) & is.null(input_directory)){
@@ -32,7 +36,7 @@ getWaveforms <- function(input_file = NULL, input_directory = NULL) {
       print("Please call function with a correct input file ('*.yml' or '*.zip').")
       return()
     }else{
-      if(grepl(pattern = "wave\\.yml", x = input_file, ignore.case = TRUE)){
+      if(grepl(pattern = "wave.+yml", x = input_file, ignore.case = TRUE)){
         # A yml file is given
         yml_file <- TRUE
         yml_directory <- FALSE
@@ -68,9 +72,9 @@ getWaveforms <- function(input_file = NULL, input_directory = NULL) {
   if(zip_container){
     yaml_files <- unzip(zipfile = file.path(input_directory, input_file), list = TRUE)
     yaml_files <- yaml_files$Name
-    yaml_files <- yaml_files[grepl(pattern = "wave\\.yml", x = yaml_files, ignore.case = TRUE)]
+    yaml_files <- yaml_files[grepl(pattern = "wave.+yml", x = yaml_files, ignore.case = TRUE)]
   }else if(yml_directory){
-    yaml_files <- list.files(path = input_directory, pattern = "wave\\.yml")
+    yaml_files <- list.files(path = input_directory, pattern = "wave.+yml")
   }else{
     yaml_files <- input_file
   }
@@ -97,12 +101,40 @@ getWaveforms <- function(input_file = NULL, input_directory = NULL) {
       # Convert list to tibble
       df_data_dummy <- dplyr::as_tibble(df_data_list)
 
+      # Reduce dimension of input if required
+      if(reduce_resolution_of_input_data){
+        max_number_of_points <- 2000
+        if(nrow(df_data_dummy) > max_number_of_points){
+          # time_step <- min(diff(df_data_dummy$time))
+          # time_interval <- max(df_data_dummy$time) - min(df_data_dummy$time)
+
+          df_data_dummy <- df_data_dummy[seq(1, nrow(df_data_dummy), floor(nrow(df_data_dummy)/max_number_of_points)), ]
+        }
+      }
+
+
       # Get date and time of measurement
-      df_data_dummy$date_time <- gsub(pattern = "-wave\\.yml",
+      df_data_dummy$date_time <- gsub(pattern = "-wave.+yml",
                                       replacement = "",
                                       x = basename(yaml_files[i]))
 
+      # Get further information depending on file name
+      if(length(grep(pattern = ".+-wave(.+)\\.yml", x = basename(yaml_files[i]), ignore.case = TRUE)) > 0){
+        df_data_dummy$file_name_extension <- gsub(pattern = ".+-wave(.+)\\.yml",
+                                                  replacement = "\\1",
+                                                  x = basename(yaml_files[i]))
+      }else{
+        df_data_dummy$file_name_extension <- NA
+      }
+
+      # Add ID (file index)
       df_data_dummy$ID <- i
+
+      # Put all voltages into one column and the respective channel into another one
+      df_data_dummy <- tidyr::gather(data = df_data_dummy, key = "Channel", value = "U",  -c("time", "date_time", "file_name_extension", "ID"))
+
+      # Delete possible character of Channel column
+      df_data_dummy$Channel <- as.numeric(gsub(pattern = "[^0-9.-]", replacement = "", x = df_data_dummy$Channel))
 
       if(i == 1 || first_non_zero_data){
         df_data <- df_data_dummy
@@ -124,8 +156,8 @@ getWaveforms <- function(input_file = NULL, input_directory = NULL) {
   # Convert date and time
   df_data$date_time <- as.POSIXct(strptime(df_data$date_time, "%Y%m%d-%H%M%S"))
 
-  # Put all voltages into one column and the respective channel into another one
-  df_data <- tidyr::gather(data = df_data, key = "Channel", value = "U",  -c("time", "date_time", "ID"))
+  # Make channel number as factor
+  df_data$Channel <- as.factor(df_data$Channel)
 
   return(df_data)
 }

@@ -41,5 +41,5 @@ This functions takes recorded oscilloscope data (Vavg and Vpp)
 (obtained through getMeasurements.R) and plots it
 }
 \author{
-Kai Budde
+Kai Budde-Sagert
 }

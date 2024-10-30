@@ -1,14 +1,24 @@
-Package: oscilliscopeR
 Type: Package
-Title: Import and work with data from oscilloscope
-Version: 0.1.4
-Author: c(person("Kai", "Budde", email = "kai.budde@uni-rostock.de",
-    role = c("aut", "cre"))
-Maintainer: Kai Budde <kai.budde@uni-rostock.de>
-Description: This package reads recorded data from measurements
-    of an oscilloscope (as yaml files) and plots them. 
-License: LICENSE
+Package: oscilloscopeR
+Title: Import and work with data from oscilloscope(s)
+Version: 0.2.0
+Authors@R: 
+    person("Kai", "Budde-Sagert", , "kai.budde-sagert@uni-rostock.de", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-6836-9865"))
+Maintainer: Kai Budde-Sagert <kai.budde-sagert@uni-rostock.de>
+Description: This package reads recorded data from measurements of an
+    oscilloscope (as yaml files), calculates some values, and plots them.
+License: GPL-3 + file LICENSE
+URL: https://github.com/SFB-ELAINE/oscilloscopeR
+BugReports: https://github.com/SFB-ELAINE/oscilloscopeR/issues
+Depends: 
+    R (>= 4.0.0)
+Imports:
+    lubridate (>= 1.9.0),
+    scattermore (>= 0.8),
+    tidyverse (>= 1.3.2),
+    yaml (>= 2.3.6)
+ByteCompile: TRUE
 Encoding: UTF-8
 LazyData: true
-Imports: tidyverse, yaml, scattermore
 RoxygenNote: 7.2.3

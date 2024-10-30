@@ -6,7 +6,6 @@
 #' @author Kai Budde-Sagert
 #' @export convertMeasurementListToTibble
 #' @param df_data_list A list (list of data)
-#' @param variabel_name A character ()
 #' @return A tibble with the data
 
 # Created: 2022/04/19

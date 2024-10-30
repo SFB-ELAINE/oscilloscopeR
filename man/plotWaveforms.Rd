@@ -9,13 +9,20 @@ plotWaveforms(
   input_data = NULL,
   output_dir = NULL,
   show_time_in_us = FALSE,
+  waveform_of_function_generator = "rectangular",
   channel_function_generator = "CHAN1",
   channel_stimulation_pulse = "CHAN2",
+  channel_resistor = NA,
   plot_waveforms = "all",
   voltage_limits_of_plot = NULL,
   filter_stim_off = TRUE,
+  shunt_resistance = NA,
+  plot_current_calculation = FALSE,
+  y_position_current_text = NA,
   epsilon_for_filtering = 1.5,
-  plot_title = NULL
+  plot_title = NULL,
+  print_width = 19.2,
+  print_height = 10.8
 )
 }
 \arguments{
@@ -26,23 +33,40 @@ plotWaveforms(
 \item{show_time_in_us}{A boolean (indicates whether time is to be shown
 in us)}
 
+\item{waveform_of_function_generator}{A character (waveform of the signal: either sinusoidal or rectangular)}
+
 \item{channel_function_generator}{A character (name of the channel with
 the function generator pulse (for GATE TTL))}
 
 \item{channel_stimulation_pulse}{A character (name of the channel with
 the stimulation pulse)}
 
+\item{channel_resistor}{A character (name of the channel that recorded the
+voltage drop across a shunt resistor)}
+
 \item{plot_waveforms}{A character (shows if all, none, or one waveform shall be plotted)}
 
 \item{voltage_limits_of_plot}{A number (value of min (negativ of the value)
 and max values to be shown on y axis)}
 
-\item{filter_stim_off}{A boolean (indicates whether measurements while
+\item{filter_stim_off}{A Boolean (indicates whether measurements while
 stim==off are to be filtered)}
+
+\item{shunt_resistance}{A number (Resistance in ohm)}
+
+\item{plot_current_calculation}{A Boolean (plot min and max of measurements
+using the ohmic resistance of the shunt resistor)}
+
+\item{y_position_current_text}{A number (y position for displaying current
+measurement text).}
 
 \item{epsilon_for_filtering}{A number (min. distance for mean from 0 needed for filtering out the signal generator)}
 
 \item{plot_title}{A character (title of the plot)}
+
+\item{print_width}{A number (width in cm of the saved plot)}
+
+\item{print_height}{A number (height in cm of the saved plot)}
 }
 \value{
 0
@@ -55,5 +79,5 @@ This functions takes recorded oscilloscope data (waveforms)
 (obtained through getWaveforms.R) and plots it
 }
 \author{
-Kai Budde
+Kai Budde-Sagert
 }

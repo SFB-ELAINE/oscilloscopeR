@@ -10,7 +10,7 @@
 #' @return A tibble with the data
 
 # Created: 2022/04/19
-# Last changed: 2022/04/19
+# Last changed: 2024/04/25
 
 getMeasurements <- function(input_file = NULL, input_directory = NULL) {
 
@@ -68,9 +68,9 @@ getMeasurements <- function(input_file = NULL, input_directory = NULL) {
   if(zip_container){
     yaml_files <- unzip(zipfile = file.path(input_directory, input_file), list = TRUE)
     yaml_files <- yaml_files$Name
-    yaml_files <- yaml_files[grepl(pattern = "measurement\\.yml", x = yaml_files, ignore.case = TRUE)]
+    yaml_files <- yaml_files[grepl(pattern = "measurement.+yml", x = yaml_files, ignore.case = TRUE)]
   }else if(yml_directory){
-    yaml_files <- list.files(path = input_directory, pattern = "measurement\\.yml")
+    yaml_files <- list.files(path = input_directory, pattern = "measurement.+yml")
   }else{
     yaml_files <- input_file
   }
@@ -89,9 +89,23 @@ getMeasurements <- function(input_file = NULL, input_directory = NULL) {
     df_data_dummy <- convertMeasurementListToTibble(df_data_list)
 
     # Get date and time of measurement
-    df_data_dummy$date_time <- gsub(pattern = "-measurement\\.yml",
+    df_data_dummy$date_time <- gsub(pattern = "-measurement.+yml",
                                     replacement = "",
                                     x = basename(yaml_files[i]))
+
+    # Get further information depending on file name
+    if(length(grep(pattern = ".+-measurement(.+)\\.yml", x = basename(yaml_files[i]), ignore.case = TRUE)) > 0){
+      df_data_dummy$file_name_extension <- gsub(pattern = ".+-measurement(.+)\\.yml",
+                                                replacement = "\\1",
+                                                x = basename(yaml_files[i]))
+    }else{
+      df_data_dummy$file_name_extension <- NA
+    }
+
+    # Delete possible character of Channel column
+    df_data_dummy$Channel <- as.numeric(gsub(pattern = "[^0-9.-]", replacement = "", x = df_data_dummy$Channel))
+
+    # Add ID (file index)
     df_data_dummy$ID <- i
 
     if(i == 1){
@@ -106,6 +120,9 @@ getMeasurements <- function(input_file = NULL, input_directory = NULL) {
 
   # Convert date and time
   df_data$date_time <- as.POSIXct(strptime(df_data$date_time, "%Y%m%d-%H%M%S"))
+
+  # Make channel number as factor
+  df_data$Channel <- as.factor(df_data$Channel)
 
   return(df_data)
 }

@@ -23,5 +23,5 @@ This function reads yaml files (from a directory) or a zip file
 and imports the data into a tibble
 }
 \author{
-Kai Budde
+Kai Budde-Sagert
 }

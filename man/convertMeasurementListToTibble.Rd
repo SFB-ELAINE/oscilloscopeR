@@ -9,8 +9,6 @@ convertMeasurementListToTibble(df_data_list)
 }
 \arguments{
 \item{df_data_list}{A list (list of data)}
-
-\item{variabel_name}{A character ()}
 }
 \value{
 A tibble with the data
@@ -23,5 +21,5 @@ This function takes a list with oscilloscope readings saved
 as yaml and coverts it to a tibble
 }
 \author{
-Kai Budde
+Kai Budde-Sagert
 }

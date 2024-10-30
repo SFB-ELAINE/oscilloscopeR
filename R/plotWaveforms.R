@@ -9,8 +9,9 @@
 #' @param output_dir A character (path to output directory)
 #' @param show_time_in_us A boolean (indicates whether time is to be shown
 #' in us)
-#' @param channel_stimulation_pulse A character (name of the channel with
-#' the stimulation pulse)
+#' @param waveform_of_function_generator A character (waveform of the signal: either sinusoidal or rectangular)
+#' @param channel_stimulation A character (name of the channel with
+#' the stimulation)
 #' @param channel_function_generator A character (name of the channel with
 #' the function generator pulse (for GATE TTL))
 #' @param channel_resistor A character (name of the channel that recorded the
@@ -32,13 +33,14 @@
 #' @return 0
 
 # Created: 2022/04/21
-# Last changed: 2023/08/01
+# Last changed: 2024/10/30
 
 plotWaveforms <- function(input_data = NULL,
                           output_dir = NULL,
                           show_time_in_us = FALSE,
-                          channel_function_generator = "CHAN1",
-                          channel_stimulation_pulse = "CHAN2",
+                          waveform_of_function_generator = "rectangular", # rectangular | sinusoidal
+                          channel_function_generator = 1,
+                          channel_stimulation = 2,
                           channel_resistor = NA,
                           plot_waveforms = "all",
                           voltage_limits_of_plot = NULL,
@@ -96,15 +98,15 @@ plotWaveforms <- function(input_data = NULL,
   }
 
   # Min and Max for plotting (avoid outliers)
-  global_max_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation_pulse], 0.99, na.rm = TRUE))
-  global_min_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation_pulse], 0.01, na.rm = TRUE))
+  global_max_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation], 0.99, na.rm = TRUE))
+  global_min_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation], 0.01, na.rm = TRUE))
 
   if(is.null(voltage_limits_of_plot)){
     voltage_limits_of_plot <- factor_for_min_max_scaling *
       max(abs(global_max_value), abs(global_min_value))
   }
 
-  # Detect frequency of generator pulses ###################################
+  # Detect frequency #######################################################
 
   # Delete data without signal from frequency generator
   df_dummy <- input_data %>%
@@ -120,32 +122,69 @@ plotWaveforms <- function(input_data = NULL,
     dplyr::filter(Channel == channel_function_generator,
                   date_time == filter_date)
 
-  # rising_edges <- which(df_dummy$U < mean(df_dummy$U))[
-  #   (which(df_dummy$U < mean(df_dummy$U)) + 1) %in%
-  #     which(df_dummy$U > mean(df_dummy$U))]
+  if(waveform_of_function_generator == "rectangular"){
 
-  rising_edges <- which(df_dummy$U < max(df_dummy$U, na.rm = TRUE)/2)[
-    ( which(df_dummy$U < max(df_dummy$U, na.rm = TRUE)/2) + 1 ) %in%
-      which(df_dummy$U > max(df_dummy$U, na.rm = TRUE)/2) ]
+    # rising_edges <- which(df_dummy$U < mean(df_dummy$U))[
+    #   (which(df_dummy$U < mean(df_dummy$U)) + 1) %in%
+    #     which(df_dummy$U > mean(df_dummy$U))]
 
-  start_point_function_generator_pulse <- df_dummy$time[rising_edges[1]]
-  end_point_function_generator_pulse <- df_dummy$time[rising_edges[length(rising_edges)]]
+    rising_edges <- which(df_dummy$U < max(df_dummy$U, na.rm = TRUE)/2)[
+      ( which(df_dummy$U < max(df_dummy$U, na.rm = TRUE)/2) + 1 ) %in%
+        which(df_dummy$U > max(df_dummy$U, na.rm = TRUE)/2) ]
 
-  # Calculate frequency of
-  if(start_point_function_generator_pulse == end_point_function_generator_pulse){
-    print("The frequency cannot be determined because you do not have recorded the full period of the function generator.")
-  }else{
-    periods <- length(rising_edges)-1
-    frequency_of_function_generator <- periods/(end_point_function_generator_pulse-start_point_function_generator_pulse)
+    start_point_function_generator_pulse <- df_dummy$time[rising_edges[1]]
+    end_point_function_generator_pulse <- df_dummy$time[rising_edges[length(rising_edges)]]
+
+    # Calculate frequency of
+    if(start_point_function_generator_pulse == end_point_function_generator_pulse){
+      print("The frequency cannot be determined because you do not have recorded the full period of the function generator.")
+    }else{
+      periods <- length(rising_edges)-1
+      frequency_of_function_generator <- periods/(end_point_function_generator_pulse-start_point_function_generator_pulse)
+
+      print(paste("The frequency of the function generator was: ",
+                  frequency_of_function_generator, " Hz.", sep=""))
+    }
+
+  }else if(waveform_of_function_generator == "sinusoidal"){
+
+    generator_amplitude <- (max(df_dummy$U)-min(df_dummy$U))/2
+
+    # Find approximate frequency
+    first_max <- which(df_dummy$U > 0.95*max(df_dummy$U))[1]
+    first_min <- which(df_dummy$U < 0.95*min(df_dummy$U))
+    first_min <- first_min[first_min > first_max][1]
+
+    approximate_frequency <- pi/(df_dummy$time[first_min] - df_dummy$time[first_max])
+
+    fit <- nls(y ~ A * sin(B*x + C) + D,
+               start = list(A = generator_amplitude/2, B = approximate_frequency, C = 0, D = max(df_dummy$U)/2),
+               data = data.frame(x = df_dummy$time, y = df_dummy$U))
+
+
+    # plot(df_dummy$time, df_dummy$U)
+    # co <- coef(fit)
+    # fit <- function(x, a, b, c, d) {a*sin(b*x+c)+d}
+    # curve(fit(x, a=co["A"], b=co["B"], c=co["C"], d=co["D"]), add=TRUE ,lwd=2, col="steelblue")
+
+    # Model: A * sin(B*x + C) + D
+    generator_amplitude <- coef(fit)["A"]
+    generator_frequency <- coef(fit)["B"]/2/pi
+    generator_phase <- coef(fit)["C"]
+    generator_offset <- coef(fit)["D"]
+
+    frequency_of_function_generator <- generator_frequency
 
     print(paste("The frequency of the function generator was: ",
-                frequency_of_function_generator, " Hz.", sep=""))
-  }
+                generator_frequency, " Hz.", sep=""))
 
+  }else{
+    print("Please call the function with a correct waveform (either sinusoidal or rectangular).")
+  }
 
   # Filter data for stimulation pulses #####################################
   df_dummy <- input_data %>%
-    dplyr::filter(Channel == channel_stimulation_pulse) %>%
+    dplyr::filter(Channel == channel_stimulation) %>%
     dplyr::group_by(ID) %>%
     dplyr::summarise(PeakToPeak=max(U)-min(U))
 
@@ -177,20 +216,20 @@ plotWaveforms <- function(input_data = NULL,
       input_data_filtered <- input_data %>%
         dplyr::filter(ID == i)
 
-      # Get max and min (smoothed) of all stimulation pulses #################
-      lower_bound <- (max(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]) -
-                        mean(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]))/2
-      upper_bound <- (min(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]) -
-                        mean(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation_pulse]))/2
+      # Get max and min (smoothed) of stimulation ##########################
+      lower_bound <- (max(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation]) +
+                        mean(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation]))/2
+      upper_bound <- (min(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation]) +
+                        mean(input_data_filtered$U[input_data_filtered$Channel == channel_stimulation]))/2
 
       max_value <- as.numeric(quantile(input_data_filtered$U[
-        input_data_filtered$Channel == channel_stimulation_pulse & input_data_filtered$U > lower_bound],
+        input_data_filtered$Channel == channel_stimulation & input_data_filtered$U > lower_bound],
         0.99, na.rm = TRUE))
       min_value <- as.numeric(quantile(input_data_filtered$U[
-        input_data_filtered$Channel == channel_stimulation_pulse & input_data_filtered$U < upper_bound],
+        input_data_filtered$Channel == channel_stimulation & input_data_filtered$U < upper_bound],
         0.01, na.rm = TRUE))
 
-      p2p_value <- abs(max_value) + abs(min_value)
+      p2p_value <- max_value - min_value
       if(is.na(p2p_value)){
         p2p_value <- 0
       }
@@ -202,9 +241,9 @@ plotWaveforms <- function(input_data = NULL,
 
       # Get max and min (smoothed) of resistor voltages ####################
       if(!is.na(channel_resistor) && !is.na(shunt_resistance)){
-        lower_bound <- (max(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]) -
+        lower_bound <- (max(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]) +
                           mean(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]))/2
-        upper_bound <- (min(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]) -
+        upper_bound <- (min(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]) +
                           mean(input_data_filtered$U[input_data_filtered$Channel == channel_resistor]))/2
 
         max_value_resistor <- as.numeric(quantile(input_data_filtered$U[
@@ -214,7 +253,7 @@ plotWaveforms <- function(input_data = NULL,
           input_data_filtered$Channel == channel_resistor & input_data_filtered$U < upper_bound],
           0.01, na.rm = TRUE))
 
-        p2p_value_resistor <- abs(max_value_resistor) + abs(min_value_resistor)
+        p2p_value_resistor <- max_value_resistor - min_value_resistor
         if(is.na(p2p_value_resistor)){
           p2p_value_resistor <- 0
         }
@@ -222,25 +261,33 @@ plotWaveforms <- function(input_data = NULL,
         p2p_value_resistor <- paste("V_p2p=", p2p_value_resistor, "V", sep="")
 
         max_resistor_value_text <- paste("I(+)=", format(round(max_value_resistor / shunt_resistance * 1000), nsmall = 1), "mA", sep="")
-        min_resistor_value_text <- paste("I(-)=", format(round(abs(min_value_resistor) / shunt_resistance * 1000, digits = 1), nsmall = 1), "mA", sep="")
+        min_resistor_value_text <- paste("I(-)=", format(round(min_value_resistor / shunt_resistance * 1000, digits = 1), nsmall = 1), "mA", sep="")
       }
 
 
-      # Calculate mean value of stimulation pulses ###########################
+      # Calculate mean value of stimulation ################################
 
-      if(start_point_function_generator_pulse == end_point_function_generator_pulse){
-        df_dummy <- input_data_filtered %>%
-          dplyr::filter(Channel == channel_stimulation_pulse)
+      if(waveform_of_function_generator == "retangular"){
+        if(start_point_function_generator_pulse == end_point_function_generator_pulse){
+          df_dummy <- input_data_filtered %>%
+            dplyr::filter(Channel == channel_stimulation)
 
-        mean_value <- mean(df_dummy$U)
+          mean_value <- mean(df_dummy$U)
+        }else{
+          df_dummy <- input_data_filtered %>%
+            dplyr::filter(Channel == channel_stimulation) %>%
+            dplyr::filter(time >= start_point_function_generator_pulse &
+                            time < end_point_function_generator_pulse)
+
+          mean_value <- mean(df_dummy$U)
+        }
       }else{
         df_dummy <- input_data_filtered %>%
-          dplyr::filter(Channel == channel_stimulation_pulse) %>%
-          dplyr::filter(time >= start_point_function_generator_pulse &
-                          time < end_point_function_generator_pulse)
+          dplyr::filter(Channel == channel_stimulation)
 
         mean_value <- mean(df_dummy$U)
       }
+
 
       mean_value_value_text <- paste("V_mean=", format(round(mean_value, digits = 1), nsmall = 1), "V", sep="")
 
@@ -253,14 +300,15 @@ plotWaveforms <- function(input_data = NULL,
       plot_waveform <- ggplot2::ggplot(data = input_data_filtered,
                                        aes(x = time, y = U, color=Channel)) +
         geom_line() +
-        geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray", size=1) +
-        geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray", size=1) +
-        geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
+        geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray", linewidth=1) +
+        geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray", linewidth=1) +
+        geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", linewidth=1) +
         annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value, color = "darkgray") +
         annotate("text", x=plot_annotation_x_minmax, y=(max_value-1), label=max_value_text, color = "darkgray") +
         annotate("text", x=plot_annotation_x_minmax, y=(min_value+1), label=min_value_text, color = "darkgray") +
         annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text, color = "darkgray") +
         coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
+        scale_y_continuous(breaks = scales::breaks_pretty()) +
         # labs(title=paste(plot_title_without_date, input_data_filtered$date_time[1], sep=" "),
         #      x = xaxis_lab, y = "U/V") +
         labs(title=paste(plot_title, format(as.POSIXct(input_data_filtered$date_time[1]), format = "%H:%M:%S"), sep=" "),
@@ -300,19 +348,19 @@ plotWaveforms <- function(input_data = NULL,
   # Plot all waveforms in one image ########################################
 
   # Get max and min (smoothed) of all stimulation pulses #################
-  lower_bound <- (max(input_data$U[input_data$Channel == channel_stimulation_pulse]) -
-                    mean(input_data$U[input_data$Channel == channel_stimulation_pulse]))/2
-  upper_bound <- (min(input_data$U[input_data$Channel == channel_stimulation_pulse]) -
-                    mean(input_data$U[input_data$Channel == channel_stimulation_pulse]))/2
+  lower_bound <- (max(input_data$U[input_data$Channel == channel_stimulation]) +
+                    mean(input_data$U[input_data$Channel == channel_stimulation]))/2
+  upper_bound <- (min(input_data$U[input_data$Channel == channel_stimulation]) +
+                    mean(input_data$U[input_data$Channel == channel_stimulation]))/2
 
   max_value <- as.numeric(quantile(input_data$U[
-    input_data$Channel == channel_stimulation_pulse & input_data$U > lower_bound],
+    input_data$Channel == channel_stimulation & input_data$U > lower_bound],
     0.99, na.rm = TRUE))
   min_value <- as.numeric(quantile(input_data$U[
-    input_data$Channel == channel_stimulation_pulse & input_data$U < upper_bound],
+    input_data$Channel == channel_stimulation & input_data$U < upper_bound],
     0.01, na.rm = TRUE))
 
-  p2p_value <- abs(max_value) + abs(min_value)
+  p2p_value <- max_value - min_value
 
   if(is.na(p2p_value)){
     p2p_value <- 0
@@ -325,19 +373,27 @@ plotWaveforms <- function(input_data = NULL,
 
 
   # Calculate mean
-  if(start_point_function_generator_pulse == end_point_function_generator_pulse){
-    df_dummy <- input_data %>%
-      dplyr::filter(Channel == channel_stimulation_pulse)
+  if(waveform_of_function_generator == "retangular"){
+    if(start_point_function_generator_pulse == end_point_function_generator_pulse){
+      df_dummy <- input_data %>%
+        dplyr::filter(Channel == channel_stimulation)
 
-    mean_value <- mean(df_dummy$U)
+      mean_value <- mean(df_dummy$U)
+    }else{
+      df_dummy <- input_data %>%
+        dplyr::filter(Channel == channel_stimulation) %>%
+        dplyr::filter(time >= start_point_function_generator_pulse &
+                        time < end_point_function_generator_pulse)
+
+      mean_value <- mean(df_dummy$U)
+    }
   }else{
     df_dummy <- input_data %>%
-      dplyr::filter(Channel == channel_stimulation_pulse) %>%
-      dplyr::filter(time >= start_point_function_generator_pulse &
-                      time < end_point_function_generator_pulse)
+      dplyr::filter(Channel == channel_stimulation)
 
     mean_value <- mean(df_dummy$U)
   }
+
 
   mean_value_value_text <- paste("V_mean=", format(round(mean_value, digits = 1), nsmall = 1), "V", sep="")
 
@@ -353,18 +409,20 @@ plotWaveforms <- function(input_data = NULL,
   input_data$time_of_experiment_in_minutes <- as.double(difftime(
     input_data$date_time, start_time, units = "mins"))
 
+  max_time_in_min <- ceiling(max(input_data$time_of_experiment_in_minutes))
+
   plot_waveform <- ggplot2::ggplot(data = input_data) +
     scattermore::geom_scattermore(aes(x = time, y = U, color=time_of_experiment_in_minutes),
-                                  data = . %>% filter(Channel == channel_stimulation_pulse),
+                                  data = . %>% filter(Channel == channel_stimulation),
                                   alpha = 1, pointsize = 0.6)+
-    scale_color_viridis_c(name = "Time of\nexperiment\nin min.", direction = -1, limits = c(0, 120), option = "C") +
+    scale_color_viridis_c(name = "Time of\nexperiment\nin min.", direction = -1, limits = c(0, max_time_in_min), option = "C") +
     geom_line(aes(x = time, y = U, linetype = "channel_function_generator"), color = "#00BFC4",
               data = . %>% filter(Channel == channel_function_generator) %>% group_by(time) %>% mutate(U=mean(U)),
               linewidth=0.6) +
-    geom_line(aes(x = time, y = U, linetype = "channel_stimulation_pulse"), color = "#F8766D",
-              data = . %>% filter(Channel == channel_stimulation_pulse) %>% group_by(time) %>% mutate(U=mean(U)),
+    geom_line(aes(x = time, y = U, linetype = "channel_stimulation"), color = "#F8766D",
+              data = . %>% filter(Channel == channel_stimulation) %>% group_by(time) %>% mutate(U=mean(U)),
               linewidth=0.6) +
-    scale_linetype_manual(name = "Channel", values=c("channel_function_generator" = "solid", "channel_stimulation_pulse" = "dashed"), labels = c("FunGen", "ES (mean)")) +
+    scale_linetype_manual(name = "Channel", values=c("channel_function_generator" = "solid", "channel_stimulation" = "dashed"), labels = c("FunGen", "ES (mean)")) +
     guides(linetype = guide_legend(override.aes = list(color=c("#00BFC4", "#F8766D"), linetype=c(1,2)), order = 1 )) +
     geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray") +
@@ -374,6 +432,7 @@ plotWaveforms <- function(input_data = NULL,
     annotate("text", x=plot_annotation_x_minmax, y=(min_value-1), label=min_value_text, color = "darkgray") +
     annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text, color = "darkgray")  +
     coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
+    scale_y_continuous(breaks = scales::breaks_pretty()) +
     labs(title=plot_title,
          x = xaxis_lab, y = "U/V") +
     theme_bw() +

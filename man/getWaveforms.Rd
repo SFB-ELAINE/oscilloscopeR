@@ -5,12 +5,19 @@
 \alias{getwaveforms}
 \title{getWaveforms}
 \usage{
-getWaveforms(input_file = NULL, input_directory = NULL)
+getWaveforms(
+  input_file = NULL,
+  input_directory = NULL,
+  reduce_resolution_of_input_data = TRUE
+)
 }
 \arguments{
 \item{input_file}{A character (path to yaml file to be converted)}
 
 \item{input_directory}{A character (path to directory with yaml files)}
+
+\item{reduce_resolution_of_input_data}{A Boolean (showing if fewer point
+are to be imported)}
 }
 \value{
 A tibble with the data
@@ -23,5 +30,5 @@ This function reads yaml files (from a directory) or a zip file
 and imports the waveform data into a tibble
 }
 \author{
-Kai Budde
+Kai Budde-Sagert
 }
