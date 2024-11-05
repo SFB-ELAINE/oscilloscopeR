@@ -10,8 +10,8 @@ plotWaveforms(
   output_dir = NULL,
   show_time_in_us = FALSE,
   waveform_of_function_generator = "rectangular",
-  channel_function_generator = "CHAN1",
-  channel_stimulation_pulse = "CHAN2",
+  channel_function_generator = 1,
+  channel_stimulation = 2,
   channel_resistor = NA,
   plot_waveforms = "all",
   voltage_limits_of_plot = NULL,
@@ -38,8 +38,8 @@ in us)}
 \item{channel_function_generator}{A character (name of the channel with
 the function generator pulse (for GATE TTL))}
 
-\item{channel_stimulation_pulse}{A character (name of the channel with
-the stimulation pulse)}
+\item{channel_stimulation}{A character (name of the channel with
+the stimulation)}
 
 \item{channel_resistor}{A character (name of the channel that recorded the
 voltage drop across a shunt resistor)}
