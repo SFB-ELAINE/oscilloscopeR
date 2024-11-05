@@ -9,7 +9,7 @@
 #' @param output_dir A character (path to output directory)
 #' @param show_time_in_us A boolean (indicates whether time is to be shown
 #' in us)
-#' @param waveform_of_function_generator A character (waveform of the signal: either sinusoidal or rectangular)
+#' @param waveform_of_function_generator A character (waveform of the signal: either sinusoidal or rectangular or DC)
 #' @param channel_stimulation A character (name of the channel with
 #' the stimulation)
 #' @param channel_function_generator A character (name of the channel with
@@ -38,7 +38,7 @@
 plotWaveforms <- function(input_data = NULL,
                           output_dir = NULL,
                           show_time_in_us = FALSE,
-                          waveform_of_function_generator = "rectangular", # rectangular | sinusoidal
+                          waveform_of_function_generator = "rectangular", # rectangular | sinusoidal | DC
                           channel_function_generator = 1,
                           channel_stimulation = 2,
                           channel_resistor = NA,
@@ -115,12 +115,19 @@ plotWaveforms <- function(input_data = NULL,
     # dplyr::summarise(mean = mean(U, na.rm=TRUE))
     dplyr::summarise(p2p = max(U, na.rm=TRUE)-min(U, na.rm=TRUE))
 
-  ID_with_frequency_signal <- df_dummy$ID[df_dummy$p2p > epsilon_for_filtering & !is.na(df_dummy$p2p)][1]
+  if(waveform_of_function_generator == "DC"){
+    df_dummy <- input_data %>%
+      dplyr::filter(Channel == channel_function_generator)
+  }else{
+    ID_with_frequency_signal <- df_dummy$ID[df_dummy$p2p > epsilon_for_filtering & !is.na(df_dummy$p2p)][1]
 
-  filter_date <- unique(input_data$date_time[input_data$ID == ID_with_frequency_signal])[1]
-  df_dummy <- input_data %>%
-    dplyr::filter(Channel == channel_function_generator,
-                  date_time == filter_date)
+    filter_date <- unique(input_data$date_time[input_data$ID == ID_with_frequency_signal])[1]
+
+    df_dummy <- input_data %>%
+      dplyr::filter(Channel == channel_function_generator,
+                    date_time == filter_date)
+  }
+
 
   if(waveform_of_function_generator == "rectangular"){
 
@@ -178,6 +185,11 @@ plotWaveforms <- function(input_data = NULL,
     print(paste("The frequency of the function generator was: ",
                 generator_frequency, " Hz.", sep=""))
 
+  }else if(waveform_of_function_generator == "DC"){
+    frequency_of_function_generator <- 0
+    print(paste("The frequency of the function generator was: ",
+                frequency_of_function_generator, " Hz.", sep=""))
+
   }else{
     print("Please call the function with a correct waveform (either sinusoidal or rectangular).")
   }
@@ -188,12 +200,15 @@ plotWaveforms <- function(input_data = NULL,
     dplyr::group_by(ID) %>%
     dplyr::summarise(PeakToPeak=max(U)-min(U))
 
-  ID_without_stim <- df_dummy$ID[df_dummy$PeakToPeak < epsilon_for_filtering]
+  if(waveform_of_function_generator != "DC"){
+    ID_without_stim <- df_dummy$ID[df_dummy$PeakToPeak < epsilon_for_filtering]
 
-  if(filter_stim_off){
-    input_data <- input_data %>%
-      dplyr::filter(!(input_data$ID %in% ID_without_stim))
+    if(filter_stim_off){
+      input_data <- input_data %>%
+        dplyr::filter(!(input_data$ID %in% ID_without_stim))
+    }
   }
+
 
   if(!(nrow(input_data) > 0)){
     print("Nothing to be plotted.")
@@ -304,8 +319,8 @@ plotWaveforms <- function(input_data = NULL,
         geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray", linewidth=1) +
         geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", linewidth=1) +
         annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value, color = "darkgray") +
-        annotate("text", x=plot_annotation_x_minmax, y=(max_value-1), label=max_value_text, color = "darkgray") +
-        annotate("text", x=plot_annotation_x_minmax, y=(min_value+1), label=min_value_text, color = "darkgray") +
+        annotate("text", x=plot_annotation_x_minmax, y=(1.1*max_value), label=max_value_text, color = "darkgray") +
+        annotate("text", x=plot_annotation_x_minmax, y=(0.9*min_value), label=min_value_text, color = "darkgray") +
         annotate("text", x=plot_annotation_x, y=-0.5, label=mean_value_value_text, color = "darkgray") +
         coord_cartesian(ylim = c(-voltage_limits_of_plot, voltage_limits_of_plot)) +
         scale_y_continuous(breaks = scales::breaks_pretty()) +
@@ -321,14 +336,24 @@ plotWaveforms <- function(input_data = NULL,
         plot_annotation_resistor_x <- 0.9*max(input_data_filtered$time)
 
         if(is.na(y_position_current_text)){
-          y_position_current_text <- 1.1*max_value_resistor
+          y_position_current_text_max <- 1.1*max_value_resistor
+          y_position_current_text_min <- 0.9*min_value_resistor
+
+          if(abs(y_position_current_text_max-y_position_current_text_min)/voltage_limits_of_plot < 0.01){
+            y_position_current_text_max <- y_position_current_text_max + voltage_limits_of_plot/10
+            y_position_current_text_min <- y_position_current_text_min - voltage_limits_of_plot/10
+          }
+
+        }else{
+          y_position_current_text_max <- y_position_current_text
+          y_position_current_text_min <- -y_position_current_text
         }
 
         plot_waveform <- plot_waveform +
-          geom_hline(yintercept=max_value_resistor, linetype="dotted", color = "darkgoldenrod", size=1) +
-          geom_hline(yintercept=min_value_resistor, linetype="dotted", color = "darkgoldenrod", size=1) +
-          annotate("text", x=plot_annotation_resistor_x, y=y_position_current_text, label=max_resistor_value_text, color = "darkgoldenrod") +
-          annotate("text", x=plot_annotation_resistor_x, y=-y_position_current_text, label=min_resistor_value_text, color = "darkgoldenrod")
+          geom_hline(yintercept=max_value_resistor, linetype="dotted", color = "darkgoldenrod", linewidth=1) +
+          geom_hline(yintercept=min_value_resistor, linetype="dotted", color = "darkgoldenrod", linewidth=1) +
+          annotate("text", x=plot_annotation_resistor_x, y=y_position_current_text_max, label=max_resistor_value_text, color = "darkgoldenrod") +
+          annotate("text", x=plot_annotation_resistor_x, y=y_position_current_text_min, label=min_resistor_value_text, color = "darkgoldenrod")
       }
 
       # Date and time as writable string

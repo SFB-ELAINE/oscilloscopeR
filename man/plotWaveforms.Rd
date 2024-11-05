@@ -33,7 +33,7 @@ plotWaveforms(
 \item{show_time_in_us}{A boolean (indicates whether time is to be shown
 in us)}
 
-\item{waveform_of_function_generator}{A character (waveform of the signal: either sinusoidal or rectangular)}
+\item{waveform_of_function_generator}{A character (waveform of the signal: either sinusoidal or rectangular or DC)}
 
 \item{channel_function_generator}{A character (name of the channel with
 the function generator pulse (for GATE TTL))}
