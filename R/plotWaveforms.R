@@ -40,7 +40,7 @@ plotWaveforms <- function(input_data = NULL,
                           show_time_in_us = FALSE,
                           waveform_of_function_generator = "rectangular", # rectangular | sinusoidal | DC
                           channel_function_generator = 1,
-                          channel_stimulation = 2,
+                          channel_stimulation = NA,
                           channel_resistor = NA,
                           plot_waveforms = "all",
                           voltage_limits_of_plot = NULL,
@@ -98,8 +98,13 @@ plotWaveforms <- function(input_data = NULL,
   }
 
   # Min and Max for plotting (avoid outliers)
-  global_max_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation], 0.99, na.rm = TRUE))
-  global_min_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation], 0.01, na.rm = TRUE))
+  if(!is.na(channel_stimulation)){
+    global_max_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation], 0.99, na.rm = TRUE))
+    global_min_value <- as.numeric(quantile(input_data$U[input_data$Channel == channel_stimulation], 0.01, na.rm = TRUE))
+  }else{
+    global_max_value <- as.numeric(quantile(input_data$U, 0.99, na.rm = TRUE))
+    global_min_value <- as.numeric(quantile(input_data$U, 0.01, na.rm = TRUE))
+  }
 
   if(is.null(voltage_limits_of_plot)){
     voltage_limits_of_plot <- factor_for_min_max_scaling *
@@ -195,20 +200,23 @@ plotWaveforms <- function(input_data = NULL,
   }
 
   # Filter data for stimulation pulses #####################################
-  df_dummy <- input_data %>%
-    dplyr::filter(Channel == channel_stimulation) %>%
-    dplyr::group_by(ID) %>%
-    dplyr::summarise(PeakToPeak=max(U)-min(U))
 
-  if(waveform_of_function_generator != "DC"){
-    ID_without_stim <- df_dummy$ID[df_dummy$PeakToPeak < epsilon_for_filtering]
+  if(!is.na(channel_stimulation)){
+    df_dummy <- input_data %>%
+      dplyr::filter(Channel == channel_function_generator) %>%
+      dplyr::group_by(ID) %>%
+      dplyr::summarise(PeakToPeak=max(U)-min(U))
 
-    if(filter_stim_off){
-      input_data <- input_data %>%
-        dplyr::filter(!(input_data$ID %in% ID_without_stim))
+    if(waveform_of_function_generator != "DC"){
+      ID_without_stim <- df_dummy$ID[df_dummy$PeakToPeak < epsilon_for_filtering]
+
+      if(filter_stim_off){
+        input_data <- input_data %>%
+          dplyr::filter(!(input_data$ID %in% ID_without_stim))
+      }
     }
-  }
 
+  }
 
   if(!(nrow(input_data) > 0)){
     print("Nothing to be plotted.")
@@ -439,7 +447,7 @@ plotWaveforms <- function(input_data = NULL,
   plot_waveform <- ggplot2::ggplot(data = input_data) +
     scattermore::geom_scattermore(aes(x = time, y = U, color=time_of_experiment_in_minutes),
                                   data = . %>% filter(Channel == channel_stimulation),
-                                  alpha = 1, pointsize = 0.6)+
+                                  alpha = 1, pointsize = 0.6) +
     scale_color_viridis_c(name = "Time of\nexperiment\nin min.", direction = -1, limits = c(0, max_time_in_min), option = "C") +
     geom_line(aes(x = time, y = U, linetype = "channel_function_generator"), color = "#00BFC4",
               data = . %>% filter(Channel == channel_function_generator) %>% group_by(time) %>% mutate(U=mean(U)),
@@ -451,7 +459,7 @@ plotWaveforms <- function(input_data = NULL,
     guides(linetype = guide_legend(override.aes = list(color=c("#00BFC4", "#F8766D"), linetype=c(1,2)), order = 1 )) +
     geom_hline(yintercept=max_value, linetype="dashed", color = "darkgray") +
     geom_hline(yintercept=min_value, linetype="dashed", color = "darkgray") +
-    geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", size=1) +
+    geom_hline(yintercept=mean_value, linetype="dotdash", color = "darkgray", linewidth=1) +
     annotate("text", x=plot_annotation_x, y=(voltage_limits_of_plot-1), label=p2p_value, color = "darkgray") +
     annotate("text", x=plot_annotation_x_minmax, y=(max_value+1), label=max_value_text, color = "darkgray") +
     annotate("text", x=plot_annotation_x_minmax, y=(min_value-1), label=min_value_text, color = "darkgray") +
