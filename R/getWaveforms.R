@@ -131,11 +131,18 @@ getWaveforms <- function(input_file = NULL,
       df_data_dummy$ID <- i
 
       # Put all voltages into one column and the respective channel into another one
+      pivot_longer(c(x, y, z), names_to = "key", values_to = "value")
+
       df_data_dummy <- tidyr::pivot_longer(
         data = df_data_dummy,
-        key = "Channel",
-        value = "U",
-        -c("time", "date_time", "file_name_extension", "ID"))
+        cols = -c("time", "date_time", "file_name_extension", "ID"),
+        names_to = "Channel",
+        values_to = "U")
+
+      # Old version_
+      # df_data_dummy <- tidyr::gather(data = df_data_dummy, key = "Channel", value = "U",  -c("time", "date_time", "file_name_extension", "ID"))
+      # df_data_dummy <- df_data_dummy %>%
+      #   dplyr::arrange(time, Channel)
 
       # Delete possible character of Channel column
       df_data_dummy$Channel <- as.numeric(gsub(pattern = "[^0-9.-]", replacement = "", x = df_data_dummy$Channel))
