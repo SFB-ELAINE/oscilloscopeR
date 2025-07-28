@@ -131,6 +131,8 @@ getWaveforms <- function(input_file = NULL,
       df_data_dummy$ID <- i
 
       # Put all voltages into one column and the respective channel into another one
+      pivot_longer(c(x, y, z), names_to = "key", values_to = "value")
+
       df_data_dummy <- tidyr::pivot_longer(
         data = df_data_dummy,
         cols = -c("time", "date_time", "file_name_extension", "ID"),
