@@ -114,8 +114,8 @@ getWaveforms <- function(input_file = NULL,
 
 
       # Get date and time of measurement
-      df_data_dummy$date_time <- gsub(pattern = "-wave.+yml",
-                                      replacement = "",
+      df_data_dummy$date_time <- gsub(pattern = ".*([0-9]{8}-([0-9]{6}))-wave.+yml",
+                                      replacement = "\\1",
                                       x = basename(yaml_files[i]))
 
       # Get further information depending on file name
